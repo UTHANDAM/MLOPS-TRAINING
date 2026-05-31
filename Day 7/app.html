@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RiskProof AI — Insurance Fraud Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #060D18;
+    --bg2:      #0B1525;
+    --bg3:      #0F1E35;
+    --border:   #1B3050;
+    --gold:     #F0A500;
+    --gold-dim: #C07800;
+    --red:      #FF3D3D;
+    --green:    #00D483;
+    --text:     #DCE8FF;
+    --muted:    #4E6580;
+    --accent:   #1E90FF;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── GRID NOISE BG ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(30,144,255,.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(240,165,0,.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrapper { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ─── HEADER ─── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--gold); }
+  .model-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .model-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ─── PAGE TITLE ─── */
+  .page-header {
+    text-align: center;
+    padding: 48px 0 36px;
+  }
+  .page-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800; line-height: 1.1;
+    letter-spacing: -1px;
+  }
+  .page-header h1 em {
+    color: var(--gold); font-style: normal;
+  }
+  .page-header p {
+    color: var(--muted); font-size: 15px;
+    margin-top: 10px; font-weight: 300;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .steps-bar {
+    display: flex; gap: 0;
+    margin-bottom: 36px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    position: relative;
+  }
+  .step-btn {
+    flex: 1; padding: 12px 10px;
+    text-align: center; cursor: pointer;
+    border-radius: 8px;
+    font-size: 12px; font-weight: 500;
+    color: var(--muted);
+    transition: all .3s;
+    border: none; background: transparent;
+    user-select: none;
+  }
+  .step-btn .step-num {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; margin-bottom: 3px;
+    opacity: .5;
+  }
+  .step-btn.active {
+    background: var(--bg3);
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+  }
+  .step-btn.active .step-num { opacity: 1; color: var(--gold-dim); }
+  .step-btn.done { color: var(--green); }
+  .step-btn.done .step-num { opacity: 1; color: var(--green); }
+
+  /* ─── FORM CARD ─── */
+  .form-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .section-desc {
+    color: var(--muted); font-size: 13px;
+    margin-bottom: 28px; padding-left: 42px;
+  }
+
+  /* ─── FORM GRID ─── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label {
+    font-size: 12px; font-weight: 500;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  .field select, .field input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 14px;
+    border-radius: 8px;
+    font-size: 14px; font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234E6580' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .field select:focus, .field input:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px rgba(240,165,0,.1);
+  }
+  .field select option { background: #0F1E35; }
+
+  /* ─── TOGGLE PILLS ─── */
+  .pill-group {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .pill-group input[type=radio] { display: none; }
+  .pill-group label {
+    padding: 9px 16px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px; cursor: pointer;
+    color: var(--muted);
+    transition: all .2s;
+    user-select: none;
+    text-transform: none; letter-spacing: 0; font-weight: 400;
+  }
+  .pill-group input:checked + label {
+    background: rgba(240,165,0,.15);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  /* ─── NAVIGATION ─── */
+  .nav-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+  }
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    padding: 13px 30px; border-radius: 10px;
+    border: none; cursor: pointer;
+    transition: all .2s; letter-spacing: .3px;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-outline:hover { border-color: var(--text); color: var(--text); }
+  .btn-primary {
+    background: linear-gradient(135deg, #C07800, #F0A500);
+    color: #060D18;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,.3); }
+  .btn-analyze {
+    background: linear-gradient(135deg, #1060CC, #1E90FF);
+    color: #fff; font-size: 16px; padding: 16px 48px;
+  }
+  .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,144,255,.35); }
+
+  /* ─── STEP PANELS ─── */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* ─── RESULT OVERLAY ─── */
+  .result-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(6,13,24,.92);
+    backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+  }
+  .result-overlay.show { display: flex; }
+  .result-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 48px;
+    max-width: 560px; width: 90%;
+    position: relative;
+    animation: slideUp .4s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+  .close-btn {
+    position: absolute; top: 18px; right: 20px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 8px;
+    width: 32px; height: 32px; cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: color .2s;
+  }
+  .close-btn:hover { color: var(--text); }
+
+  /* ─── GAUGE ─── */
+  .gauge-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    margin-bottom: 30px;
+  }
+  .gauge {
+    width: 180px; height: 90px;
+    position: relative; overflow: visible;
+    margin-bottom: 12px;
+  }
+  .gauge svg { width: 100%; height: 100%; overflow: visible; }
+  .gauge-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 36px; font-weight: 600;
+    text-anchor: middle; dominant-baseline: central;
+  }
+  .result-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    text-align: center;
+  }
+  .result-label.high { color: var(--red); }
+  .result-label.low  { color: var(--green); }
+
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+    margin: 8px auto 0; display: block; width: fit-content;
+    margin: 8px auto 0;
+  }
+  .result-badge.high { background: rgba(255,61,61,.15); border: 1px solid rgba(255,61,61,.4); color: var(--red); }
+  .result-badge.low  { background: rgba(0,212,131,.15); border: 1px solid rgba(0,212,131,.4); color: var(--green); }
+
+  /* ─── STATS ROW ─── */
+  .stats-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px; margin: 24px 0;
+  }
+  .stat-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px; text-align: center;
+  }
+  .stat-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px; font-weight: 600;
+    display: block; margin-bottom: 4px;
+  }
+  .stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat-box.fraud .stat-val { color: var(--red); }
+  .stat-box.safe  .stat-val { color: var(--green); }
+  .stat-box.conf  .stat-val { color: var(--gold); }
+
+  /* ─── RISK FACTORS ─── */
+  .factors-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .factor-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .factor-name { font-size: 13px; flex: 1; color: var(--text); }
+  .factor-bar-wrap {
+    flex: 1; height: 5px;
+    background: var(--bg3); border-radius: 3px;
+    overflow: hidden;
+  }
+  .factor-bar {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    transition: width 1s ease;
+  }
+  .factor-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--muted); width: 38px; text-align: right;
+  }
+
+  /* ─── MODEL TAG ─── */
+  .model-tag {
+    text-align: center; margin-top: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--muted);
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* ─── RESET BTN ─── */
+  .btn-reset {
+    width: 100%; background: var(--bg3);
+    border: 1px solid var(--border); color: var(--muted);
+    margin-top: 16px; padding: 12px;
+    border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-family: 'Inter', sans-serif;
+    transition: all .2s;
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--text); }
+
+  /* ─── LOADING SPINNER ─── */
+  .loading { display: none; text-align: center; padding: 60px 0; }
+  .loading.show { display: block; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  @media (max-width: 600px) {
+    .form-card { padding: 24px 20px; }
+    .result-card { padding: 28px 24px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .step-btn { font-size: 10px; padding: 10px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="wrapper">
+  <header>
+    <div class="logo">Risk<span>Proof</span> AI</div>
+    <div class="model-badge" id="modelBadge">
+      <span class="dot"></span>
+      <span id="modelName">Loading...</span>
+    </div>
+  </header>
+
+  <!-- PAGE TITLE -->
+  <div class="page-header">
+    <h1>Insurance Claim <em>Fraud Detection</em></h1>
+    <p>Enter claim details below — our Decision Tree model predicts fraud risk with 94% accuracy</p>
+  </div>
+
+  <!-- STEP PROGRESS -->
+  <div class="steps-bar">
+    <button class="step-btn active" onclick="goToStep(1)">
+      <span class="step-num">01</span>Incident
+    </button>
+    <button class="step-btn" onclick="goToStep(2)">
+      <span class="step-num">02</span>Vehicle & Policy
+    </button>
+    <button class="step-btn" onclick="goToStep(3)">
+      <span class="step-num">03</span>Claimant
+    </button>
+    <button class="step-btn" onclick="goToStep(4)">
+      <span class="step-num">04</span>Claim History
+    </button>
+  </div>
+
+  <!-- ── STEP 1: INCIDENT DETAILS ── -->
+  <div class="step-panel active" id="step1">
+    <div class="form-card">
+      <div class="section-title"><span class="icon">📋</span>Incident Details</div>
+      <p class="section-desc">Basic information about when and where the incident occurred</p>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Month of Incident</label>
+          <select id="Month">
+            <option value="Jan">January</option><option value="Feb">February</option>
+            <option value="Mar">March</option><option value="Apr">April</option>
+            <option value="May">May</option><option value="Jun">June</option>
+            <option value="Jul">July</option><option value="Aug">August</option>
+            <option value="Sep">September</option><option value="Oct">October</option>
+            <option value="Nov">November</option><option value="Dec">December</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Day of Week (Incident)</label>
+          <select id="DayOfWeek">
+            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+            <option>Thursday</option><option>Friday</option><option>Saturday</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Week of Month</label>
+          <input id="WeekOfMonth" type="number" min="1" max="5" value="3" placeholder="1–5"/>
+        </div>
+
+        <div class="field">
+          <label>Year</label>
+          <select id="Year">
+            <option value="1994">1994</option>
+            <option value="1995">1995</option>
+            <option value="1996">1996</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Accident Area</label>
+          <div class="pill-group">
+            <input type="radio" name="AccidentArea" id="urban" value="Urban" checked/>
+            <label for="urban">Urban</label>
+            <input type="radio" name="AccidentArea" id="rural" value="Rural"/>
+            <label for="rural">Rural</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Fault</label>
+          <div class="pill-group">
+            <input type="radio" name="Fault" id="fph" value="Policy Holder" checked/>
+            <label for="fph">Policy Holder</label>
+            <input type="radio" name="Fault" id="ftp" value="Third Party"/>
+            <label for="ftp">Third Party</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="nav-row">
+      <span></span>
+      <button class="btn btn-primary" onclick="goToStep(2)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: VEHICLE & POLICY ── -->
+  <div class="step-panel" id="step2">
+    <div class="form-card">
+      <div class="section-title"><span class="icon">🚗</span>Vehicle & Policy Details</div>
+      <p class="section-desc">Information about the insured vehicle and associated policy</p>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Vehicle Make</label>
+          <select id="Make">
+            <option>Honda</option><option>Toyota</option><option>Ford</option>
+            <option>Chevrolet</option><option>Mazda</option><option>BMW</option>
+            <option>Dodge</option><option>Ferrari</option><option>Jaguar</option>
+            <option>Lexus</option><option>Mecedes</option><option>Mercury</option>
+            <option>Nisson</option><option>Pontiac</option><option>Porche</option>
+            <option>Saab</option><option>Saturn</option><option>VW</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Vehicle Category</label>
+          <select id="VehicleCategory">
+            <option>Sport</option><option>Utility</option><option>Sedan</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Vehicle Price Range</label>
+          <select id="VehiclePrice">
+            <option value="less than 20000">Less than $20,000</option>
+            <option value="20000 to 29000">$20,000 – $29,000</option>
+            <option value="30000 to 39000">$30,000 – $39,000</option>
+            <option value="40000 to 59000">$40,000 – $59,000</option>
+            <option value="60000 to 69000">$60,000 – $69,000</option>
+            <option value="more than 69000" selected>More than $69,000</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Age of Vehicle</label>
+          <select id="AgeOfVehicle">
+            <option value="new">New</option>
+            <option value="2 years">2 Years</option>
+            <option value="3 years">3 Years</option>
+            <option value="4 years">4 Years</option>
+            <option value="5 years">5 Years</option>
+            <option value="6 years">6 Years</option>
+            <option value="7 years">7 Years</option>
+            <option value="more than 7">More than 7 Years</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Policy Type</label>
+          <select id="PolicyType">
+            <option value="Sport - Liability">Sport — Liability</option>
+            <option value="Sport - Collision">Sport — Collision</option>
+            <option value="Sport - All Perils">Sport — All Perils</option>
+            <option value="Sedan - Liability">Sedan — Liability</option>
+            <option value="Sedan - Collision">Sedan — Collision</option>
+            <option value="Sedan - All Perils">Sedan — All Perils</option>
+            <option value="Utility - Liability">Utility — Liability</option>
+            <option value="Utility - Collision">Utility — Collision</option>
+            <option value="Utility - All Perils">Utility — All Perils</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Base Policy</label>
+          <select id="BasePolicy">
+            <option>Liability</option>
+            <option>Collision</option>
+            <option>All Perils</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Deductible ($)</label>
+          <select id="Deductible">
+            <option value="300">$300</option>
+            <option value="400" selected>$400</option>
+            <option value="500">$500</option>
+            <option value="700">$700</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Days Policy → Accident</label>
+          <select id="Days_Policy_Accident">
+            <option value="none">None / Same day</option>
+            <option value="1 to 7">1 to 7 days</option>
+            <option value="8 to 15">8 to 15 days</option>
+            <option value="15 to 30">15 to 30 days</option>
+            <option value="more than 30" selected>More than 30 days</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep(3)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: CLAIMANT PROFILE ── -->
+  <div class="step-panel" id="step3">
+    <div class="form-card">
+      <div class="section-title"><span class="icon">👤</span>Claimant Profile</div>
+      <p class="section-desc">Demographic and profile details of the policyholder</p>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Sex</label>
+          <div class="pill-group">
+            <input type="radio" name="Sex" id="male" value="Male" checked/>
+            <label for="male">Male</label>
+            <input type="radio" name="Sex" id="female" value="Female"/>
+            <label for="female">Female</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Age</label>
+          <input id="Age" type="number" min="18" max="80" value="35" placeholder="Enter age"/>
+        </div>
+
+        <div class="field">
+          <label>Marital Status</label>
+          <select id="MaritalStatus">
+            <option>Single</option><option>Married</option>
+            <option>Widow</option><option>Divorced</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Age of Policy Holder</label>
+          <select id="AgeOfPolicyHolder">
+            <option value="18 to 20">18 – 20</option>
+            <option value="21 to 25">21 – 25</option>
+            <option value="26 to 30">26 – 30</option>
+            <option value="31 to 35" selected>31 – 35</option>
+            <option value="36 to 40">36 – 40</option>
+            <option value="41 to 50">41 – 50</option>
+            <option value="51 to 65">51 – 65</option>
+            <option value="over 65">Over 65</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Driver Rating (1–4)</label>
+          <div class="pill-group">
+            <input type="radio" name="DriverRating" id="dr1" value="1"/><label for="dr1">1</label>
+            <input type="radio" name="DriverRating" id="dr2" value="2"/><label for="dr2">2</label>
+            <input type="radio" name="DriverRating" id="dr3" value="3" checked/><label for="dr3">3</label>
+            <input type="radio" name="DriverRating" id="dr4" value="4"/><label for="dr4">4</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Police Report Filed?</label>
+          <div class="pill-group">
+            <input type="radio" name="PoliceReportFiled" id="prf_yes" value="Yes"/><label for="prf_yes">Yes</label>
+            <input type="radio" name="PoliceReportFiled" id="prf_no" value="No" checked/><label for="prf_no">No</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Witness Present?</label>
+          <div class="pill-group">
+            <input type="radio" name="WitnessPresent" id="wp_yes" value="Yes"/><label for="wp_yes">Yes</label>
+            <input type="radio" name="WitnessPresent" id="wp_no" value="No" checked/><label for="wp_no">No</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Agent Type</label>
+          <div class="pill-group">
+            <input type="radio" name="AgentType" id="ext" value="External" checked/><label for="ext">External</label>
+            <input type="radio" name="AgentType" id="int" value="Internal"/><label for="int">Internal</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep(4)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: CLAIM HISTORY ── -->
+  <div class="step-panel" id="step4">
+    <div class="form-card">
+      <div class="section-title"><span class="icon">📂</span>Claim Processing Info</div>
+      <p class="section-desc">History and filing details related to this claim</p>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Month Claimed</label>
+          <select id="MonthClaimed">
+            <option value="Jan">January</option><option value="Feb">February</option>
+            <option value="Mar">March</option><option value="Apr">April</option>
+            <option value="May">May</option><option value="Jun">June</option>
+            <option value="Jul">July</option><option value="Aug">August</option>
+            <option value="Sep">September</option><option value="Oct">October</option>
+            <option value="Nov">November</option><option value="Dec">December</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Day of Week (Claimed)</label>
+          <select id="DayOfWeekClaimed">
+            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+            <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Week of Month (Claimed)</label>
+          <input id="WeekOfMonthClaimed" type="number" min="1" max="5" value="2" placeholder="1–5"/>
+        </div>
+
+        <div class="field">
+          <label>Days Policy → Claim</label>
+          <select id="Days_Policy_Claim">
+            <option value="none">None / Same day</option>
+            <option value="8 to 15">8 to 15 days</option>
+            <option value="15 to 30">15 to 30 days</option>
+            <option value="more than 30" selected>More than 30 days</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Past Number of Claims</label>
+          <select id="PastNumberOfClaims">
+            <option value="none" selected>None</option>
+            <option value="1">1</option>
+            <option value="2 to 4">2 to 4</option>
+            <option value="more than 4">More than 4</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Number of Supplements</label>
+          <select id="NumberOfSuppliments">
+            <option value="none" selected>None</option>
+            <option value="1 to 2">1 to 2</option>
+            <option value="3 to 5">3 to 5</option>
+            <option value="more than 5">More than 5</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Address Change at Claim</label>
+          <select id="AddressChange_Claim">
+            <option value="no change" selected>No change</option>
+            <option value="under 6 months">Under 6 months</option>
+            <option value="1 year">1 year ago</option>
+            <option value="2 to 3 years">2 to 3 years ago</option>
+            <option value="4 to 8 years">4 to 8 years ago</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Number of Cars (Policy)</label>
+          <select id="NumberOfCars">
+            <option value="1 vehicle" selected>1 Vehicle</option>
+            <option value="2 vehicles">2 Vehicles</option>
+            <option value="3 to 4">3 to 4</option>
+            <option value="5 to 8">5 to 8</option>
+            <option value="more than 8">More than 8</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="nav-row" style="justify-content:space-between; align-items:center; margin-top:24px;">
+      <button class="btn btn-outline" onclick="goToStep(3)">← Back</button>
+      <button class="btn btn-analyze" onclick="analyzeClick()">🔍 Analyze Fraud Risk</button>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<!-- ── RESULT OVERLAY ── -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <button class="close-btn" onclick="closeResult()">×</button>
+
+    <!-- LOADING STATE -->
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      <p style="color:var(--muted);font-size:14px;">Analyzing claim data...</p>
+    </div>
+
+    <!-- RESULT STATE -->
+    <div id="resultState" style="display:none;">
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <svg viewBox="0 0 180 90" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background arc -->
+            <path d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#1B3050" stroke-width="12" stroke-linecap="round"/>
+            <!-- Value arc -->
+            <path id="gaugeArc" d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#F0A500" stroke-width="12" stroke-linecap="round"
+              stroke-dasharray="251" stroke-dashoffset="251"/>
+            <!-- Center text -->
+            <text id="gaugePct" x="90" y="75" class="gauge-pct" fill="#DCE8FF">0%</text>
+          </svg>
+        </div>
+        <div class="result-label" id="resultLabel">Analyzing...</div>
+        <div class="result-badge" id="resultBadge">—</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box fraud">
+          <span class="stat-val" id="statFraud">—</span>
+          <span class="stat-lbl">Fraud Risk</span>
+        </div>
+        <div class="stat-box safe">
+          <span class="stat-val" id="statSafe">—</span>
+          <span class="stat-lbl">Safe Probability</span>
+        </div>
+        <div class="stat-box conf">
+          <span class="stat-val" id="statConf">—</span>
+          <span class="stat-lbl">Confidence</span>
+        </div>
+      </div>
+
+      <hr class="divider"/>
+
+      <div id="factorsSection">
+        <p class="factors-title">Key Risk Factors</p>
+        <div id="factorsList"></div>
+      </div>
+
+      <div class="model-tag" id="modelTag">—</div>
+      <button class="btn-reset" onclick="closeResult()">← Analyze Another Claim</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 4;
+
+  // ── Load model info on startup ──
+  fetch('/model_info')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('modelName').textContent =
+        d.model_name + ' · ' + d.accuracy + '% acc.';
+    })
+    .catch(() => {
+      document.getElementById('modelName').textContent = 'Decision Tree · 94.16% acc.';
+    });
+
+  // ── Step navigation ──
+  function goToStep(n) {
+    document.getElementById('step' + currentStep).classList.remove('active');
+    document.querySelectorAll('.step-btn')[currentStep - 1].classList.remove('active');
+    if (currentStep < n)
+      document.querySelectorAll('.step-btn')[currentStep - 1].classList.add('done');
+
+    currentStep = n;
+    document.getElementById('step' + currentStep).classList.add('active');
+    const btns = document.querySelectorAll('.step-btn');
+    btns[currentStep - 1].classList.remove('done');
+    btns[currentStep - 1].classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Radio helpers ──
+  function getRadio(name) {
+    const els = document.getElementsByName(name);
+    for (let e of els) if (e.checked) return e.value;
+    return '';
+  }
+
+  // ── Collect all form data ──
+  function collectData() {
+    return {
+      Month               : document.getElementById('Month').value,
+      WeekOfMonth         : document.getElementById('WeekOfMonth').value,
+      DayOfWeek           : document.getElementById('DayOfWeek').value,
+      Make                : document.getElementById('Make').value,
+      AccidentArea        : getRadio('AccidentArea'),
+      DayOfWeekClaimed    : document.getElementById('DayOfWeekClaimed').value,
+      MonthClaimed        : document.getElementById('MonthClaimed').value,
+      WeekOfMonthClaimed  : document.getElementById('WeekOfMonthClaimed').value,
+      Sex                 : getRadio('Sex'),
+      MaritalStatus       : document.getElementById('MaritalStatus').value,
+      Age                 : document.getElementById('Age').value,
+      Fault               : getRadio('Fault'),
+      PolicyType          : document.getElementById('PolicyType').value,
+      VehicleCategory     : document.getElementById('VehicleCategory').value,
+      VehiclePrice        : document.getElementById('VehiclePrice').value,
+      Deductible          : document.getElementById('Deductible').value,
+      DriverRating        : getRadio('DriverRating'),
+      Days_Policy_Accident: document.getElementById('Days_Policy_Accident').value,
+      Days_Policy_Claim   : document.getElementById('Days_Policy_Claim').value,
+      PastNumberOfClaims  : document.getElementById('PastNumberOfClaims').value,
+      AgeOfVehicle        : document.getElementById('AgeOfVehicle').value,
+      AgeOfPolicyHolder   : document.getElementById('AgeOfPolicyHolder').value,
+      PoliceReportFiled   : getRadio('PoliceReportFiled'),
+      WitnessPresent      : getRadio('WitnessPresent'),
+      AgentType           : getRadio('AgentType'),
+      NumberOfSuppliments : document.getElementById('NumberOfSuppliments').value,
+      AddressChange_Claim : document.getElementById('AddressChange_Claim').value,
+      NumberOfCars        : document.getElementById('NumberOfCars').value,
+      Year                : document.getElementById('Year').value,
+      BasePolicy          : document.getElementById('BasePolicy').value,
+    };
+  }
+
+  // ── Gauge arc helper ──
+  function setGauge(pct, isHigh) {
+    const arc    = document.getElementById('gaugeArc');
+    const label  = document.getElementById('gaugePct');
+    const total  = 251;
+    const offset = total - (pct / 100) * total;
+    arc.style.strokeDashoffset = total; // reset
+    arc.style.stroke = isHigh ? '#FF3D3D' : '#00D483';
+    label.textContent = pct + '%';
+    setTimeout(() => {
+      arc.style.transition = 'stroke-dashoffset 1.2s ease';
+      arc.style.strokeDashoffset = offset;
+    }, 80);
+  }
+
+  // ── Analyze click ──
+  function analyzeClick() {
+    const data = collectData();
+    const overlay = document.getElementById('resultOverlay');
+    overlay.classList.add('show');
+    document.getElementById('loadingState').classList.add('show');
+    document.getElementById('resultState').style.display = 'none';
+
+    fetch('/predict', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+      document.getElementById('loadingState').classList.remove('show');
+      document.getElementById('resultState').style.display = 'block';
+      renderResult(res);
+    })
+    .catch(() => {
+      document.getElementById('loadingState').classList.remove('show');
+      document.getElementById('resultState').style.display = 'block';
+      document.getElementById('resultLabel').textContent = 'Server Error';
+      document.getElementById('resultLabel').className = 'result-label high';
+    });
+  }
+
+  // ── Render result ──
+  function renderResult(res) {
+    const isHigh = res.prediction === 1;
+    setGauge(res.fraud_probability, isHigh);
+
+    const lbl = document.getElementById('resultLabel');
+    lbl.textContent = res.label;
+    lbl.className = 'result-label ' + (isHigh ? 'high' : 'low');
+
+    const badge = document.getElementById('resultBadge');
+    badge.textContent = isHigh ? '⚠ High Fraud Risk Detected' : '✓ Low Fraud Risk';
+    badge.className = 'result-badge ' + (isHigh ? 'high' : 'low');
+
+    document.getElementById('statFraud').textContent = res.fraud_probability + '%';
+    document.getElementById('statSafe').textContent  = res.safe_probability  + '%';
+    document.getElementById('statConf').textContent  = res.confidence        + '%';
+
+    // Risk factors
+    const list = document.getElementById('factorsList');
+    list.innerHTML = '';
+    const factors = res.risk_factors || [];
+    if (factors.length === 0) {
+      document.getElementById('factorsSection').style.display = 'none';
+    } else {
+      document.getElementById('factorsSection').style.display = 'block';
+      factors.forEach(f => {
+        list.innerHTML += `
+          <div class="factor-row">
+            <span class="factor-name">${f.factor}</span>
+            <div class="factor-bar-wrap">
+              <div class="factor-bar" style="width:${Math.min(f.weight * 3, 100)}%"></div>
+            </div>
+            <span class="factor-pct">${f.weight}%</span>
+          </div>`;
+      });
+    }
+
+    document.getElementById('modelTag').textContent =
+      'Model: ' + res.model_used + ' · Trained Accuracy: ' + res.model_accuracy + '%';
+  }
+
+  function closeResult() {
+    document.getElementById('resultOverlay').classList.remove('show');
+  }
+</script>
+</body>
+</html>
