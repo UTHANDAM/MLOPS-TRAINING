@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskProof AI</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="page-header panel">
+      <h1>RiskProof AI</h1>
+    </header>
+
+    <section class="workspace" id="workspace">
+      <form id="riskForm" class="panel form-panel">
+        <div class="section-title">
+          <div>
+            <p class="section-kicker">Live workspace</p>
+            <h2>Claim intelligence inputs</h2>
+          </div>
+          <button type="button" id="resetBtn">Reset</button>
+        </div>
+
+        <p class="panel-copy">
+          Tune the claim profile and instantly see how the model classifies risk.
+        </p>
+
+        <div class="grid">
+          <label>
+            Age
+            <input id="Age" name="Age" type="number" min="16" max="90" value="35" />
+          </label>
+
+          <label>
+            Accident Area
+            <select id="AccidentArea" name="AccidentArea"></select>
+          </label>
+
+          <label>
+            Fault
+            <select id="Fault" name="Fault"></select>
+          </label>
+
+          <label>
+            Policy Type
+            <select id="PolicyType" name="PolicyType"></select>
+          </label>
+
+          <label>
+            Vehicle Category
+            <select id="VehicleCategory" name="VehicleCategory"></select>
+          </label>
+
+          <label>
+            Vehicle Price
+            <select id="VehiclePrice" name="VehiclePrice"></select>
+          </label>
+
+          <label>
+            Past Claims
+            <select id="PastNumberOfClaims" name="PastNumberOfClaims"></select>
+          </label>
+
+          <label>
+            Police Report
+            <select id="PoliceReportFiled" name="PoliceReportFiled"></select>
+          </label>
+
+          <label>
+            Witness Present
+            <select id="WitnessPresent" name="WitnessPresent"></select>
+          </label>
+
+          <label>
+            Agent Type
+            <select id="AgentType" name="AgentType"></select>
+          </label>
+
+          <label>
+            Claim Supplements
+            <select id="NumberOfSuppliments" name="NumberOfSuppliments"></select>
+          </label>
+
+          <label>
+            Address Change
+            <select id="AddressChange_Claim" name="AddressChange_Claim"></select>
+          </label>
+
+          <label>
+            Age of Vehicle
+            <select id="AgeOfVehicle" name="AgeOfVehicle"></select>
+          </label>
+
+          <label>
+            Age of Policy Holder
+            <select id="AgeOfPolicyHolder" name="AgeOfPolicyHolder"></select>
+          </label>
+
+          <label>
+            Driver Rating
+            <select id="DriverRating" name="DriverRating"></select>
+          </label>
+
+          <label>
+            Deductible
+            <select id="Deductible" name="Deductible"></select>
+          </label>
+        </div>
+
+        <details>
+          <summary>Advanced fields</summary>
+          <div class="grid advanced-grid">
+            <label>Month <select id="Month" name="Month"></select></label>
+            <label>Week of Month <input id="WeekOfMonth" name="WeekOfMonth" type="number" min="1" max="5" value="3" /></label>
+            <label>Day of Week <select id="DayOfWeek" name="DayOfWeek"></select></label>
+            <label>Make <select id="Make" name="Make"></select></label>
+            <label>Claimed Month <select id="MonthClaimed" name="MonthClaimed"></select></label>
+            <label>Claimed Week <input id="WeekOfMonthClaimed" name="WeekOfMonthClaimed" type="number" min="1" max="5" value="3" /></label>
+            <label>Claimed Day <select id="DayOfWeekClaimed" name="DayOfWeekClaimed"></select></label>
+            <label>Sex <select id="Sex" name="Sex"></select></label>
+            <label>Marital Status <select id="MaritalStatus" name="MaritalStatus"></select></label>
+            <label>Policy Accident Days <select id="Days_Policy_Accident" name="Days_Policy_Accident"></select></label>
+            <label>Policy Claim Days <select id="Days_Policy_Claim" name="Days_Policy_Claim"></select></label>
+            <label>Number of Cars <select id="NumberOfCars" name="NumberOfCars"></select></label>
+            <label>Year <select id="Year" name="Year"></select></label>
+          </div>
+        </details>
+
+        <button class="primary" type="submit">Predict Claim Risk</button>
+      </form>
+
+      <aside class="panel result-panel">
+        <div class="section-title result-title">
+          <div>
+            <p class="section-kicker">Model output</p>
+            <h2>Prediction Result</h2>
+          </div>
+        </div>
+        <div id="resultState" class="empty-state">Enter claim details and run prediction.</div>
+        <div id="resultCard" class="result-card hidden">
+          <div class="risk-row">
+            <span id="riskLabel">-</span>
+            <strong id="riskScore">-</strong>
+          </div>
+          <div class="metric-grid">
+            <div>
+              <small>Prediction</small>
+              <strong id="predictionValue">-</strong>
+            </div>
+            <div>
+              <small>Model</small>
+              <strong id="modelName">-</strong>
+            </div>
+            <div>
+              <small>Best Accuracy</small>
+              <strong id="bestAccuracy">-</strong>
+            </div>
+          </div>
+          <p id="recommendation"></p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
