@@ -1,0 +1,12 @@
+model,pickle_path,joblib_path
+Simple Linear Regression,saved_models\simple_linear_regression.pkl,saved_models\simple_linear_regression.joblib
+Multiple Linear Regression,saved_models\multiple_linear_regression.pkl,saved_models\multiple_linear_regression.joblib
+Logistic Regression,saved_models\logistic_regression.pkl,saved_models\logistic_regression.joblib
+Decision Tree,saved_models\decision_tree.pkl,saved_models\decision_tree.joblib
+Random Forest,saved_models\random_forest.pkl,saved_models\random_forest.joblib
+Naive Bayes,saved_models\naive_bayes.pkl,saved_models\naive_bayes.joblib
+KNN,saved_models\knn.pkl,saved_models\knn.joblib
+SVM,saved_models\svm.pkl,saved_models\svm.joblib
+KMeans,saved_models\kmeans.pkl,saved_models\kmeans.joblib
+Logistic Regression Multiclass,saved_models\logistic_regression_multiclass.pkl,saved_models\logistic_regression_multiclass.joblib
+FINAL_BEST_MODEL,riskproof_ai_best_model.pkl,riskproof_ai_best_model.joblib

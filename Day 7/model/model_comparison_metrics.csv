@@ -1,0 +1,10 @@
+model,accuracy,balanced_accuracy,precision_fraud,recall_fraud,f1_fraud,parameters
+Decision Tree,0.9416342412451362,0.5135135135135135,1.0,0.02702702702702703,0.05263157894736842,"{'criterion': 'gini', 'max_depth': 5, 'min_samples_leaf': 5}"
+Logistic Regression,0.9406614785992218,0.5079356348414644,0.75,0.016216216216216217,0.031746031746031744,"{'C': 1.0, 'class_weight': None}"
+Random Forest,0.940337224383917,0.5027027027027027,1.0,0.005405405405405406,0.010752688172043012,"{'n_estimators': 100, 'max_depth': None, 'class_weight': 'balanced'}"
+KNN,0.9400129701686122,0.5025302294360591,0.5,0.005405405405405406,0.0106951871657754,"{'n_neighbors': 9, 'weights': 'uniform'}"
+Simple Linear Regression,0.9400129701686122,0.5,0.0,0.0,0.0,"{'features': ['Age'], 'threshold': 0.5}"
+Multiple Linear Regression,0.9400129701686122,0.5,0.0,0.0,0.0,"{'features': 'all one-hot encoded features', 'threshold': 0.5}"
+SVM,0.9400129701686122,0.5,0.0,0.0,0.0,"{'algorithm': 'LinearSVC', 'C': 0.01, 'class_weight': None}"
+KMeans,0.9400129701686122,0.5,0.0,0.0,0.0,"{'n_clusters': 2, 'cluster_mapping': {0: 0, 1: 0}}"
+Naive Bayes,0.10376134889753567,0.5030420555084232,0.06034776679168087,0.9567567567567568,0.11353431686978832,{'var_smoothing': 0.0001}
