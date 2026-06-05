@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ProofAI · Fire & Smoke Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────────── */
+    :root {
+      --bg:          #0a0a0a;
+      --surface:     #111111;
+      --surface2:    #181818;
+      --border:      #2a2a2a;
+      --border-hot:  #ff4500;
+
+      --amber:       #ffb400;
+      --amber-dim:   #c98a00;
+      --red:         #ff3b1a;
+      --smoke:       #8da8c4;
+      --green:       #39ff14;
+      --text:        #e8e0d0;
+      --text-muted:  #5a5a5a;
+      --text-dim:    #3a3a3a;
+
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-ui:      'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise overlay ─────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    .shell {
+      position: relative; z-index: 1;
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding: 40px 0 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-block { display: flex; flex-direction: column; gap: 2px; }
+    .logo-title {
+      font-family: var(--font-display);
+      font-size: 3.2rem; letter-spacing: 4px; line-height: 1;
+      background: linear-gradient(135deg, var(--amber) 0%, var(--red) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-sub {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase;
+    }
+    .header-status {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-muted); text-transform: uppercase;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ── Upload Zone ───────────────────────────────────────────────── */
+    .upload-zone {
+      margin-top: 40px;
+      border: 1.5px dashed var(--border);
+      border-radius: 4px;
+      padding: 56px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--amber);
+      background: rgba(255,180,0,0.03);
+    }
+    .upload-zone.drag-over { border-style: solid; }
+
+    .upload-icon {
+      font-size: 2.2rem; margin-bottom: 16px;
+      display: block;
+      filter: drop-shadow(0 0 12px rgba(255,180,0,0.4));
+    }
+    .upload-label {
+      font-family: var(--font-display); font-size: 1.4rem;
+      letter-spacing: 3px; color: var(--text-muted);
+    }
+    .upload-hint {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-dim); margin-top: 8px; letter-spacing: 0.15em;
+    }
+
+    #file-input { display: none; }
+
+    /* ── Conf Slider ───────────────────────────────────────────────── */
+    .controls {
+      display: flex; align-items: center; gap: 20px;
+      margin-top: 24px; padding: 16px 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .ctrl-label {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.15em; white-space: nowrap;
+    }
+    .ctrl-value {
+      font-family: var(--font-mono); font-size: 0.75rem;
+      color: var(--amber); font-weight: 600; min-width: 44px;
+    }
+    input[type=range] {
+      flex: 1; appearance: none;
+      height: 3px; background: var(--border); border-radius: 2px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--amber);
+      box-shadow: 0 0 8px rgba(255,180,0,0.6); cursor: pointer;
+    }
+
+    .btn-analyze {
+      background: var(--amber); color: #0a0a0a;
+      border: none; border-radius: 3px;
+      padding: 10px 24px;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+      cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+    .btn-analyze:hover { background: #ffc733; box-shadow: 0 0 16px rgba(255,180,0,0.4); }
+    .btn-analyze:disabled { background: var(--border); color: var(--text-dim); cursor: not-allowed; box-shadow: none; }
+
+    /* ── Loading bar ───────────────────────────────────────────────── */
+    .loading-bar {
+      height: 2px; width: 100%;
+      background: var(--border); border-radius: 1px;
+      margin-top: 12px; overflow: hidden; display: none;
+    }
+    .loading-bar.active { display: block; }
+    .loading-bar::after {
+      content: ''; display: block; height: 100%;
+      background: linear-gradient(90deg, transparent, var(--amber), transparent);
+      animation: slide 1.2s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0% { transform: translateX(-100%); width: 60%; }
+      100% { transform: translateX(200%); width: 60%; }
+    }
+
+    /* ── Preview / Results area ─────────────────────────────────────── */
+    .results-wrap { display: none; margin-top: 40px; }
+    .results-wrap.visible { display: block; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+    .section-heading {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      letter-spacing: 0.3em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-heading::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Image comparison grid */
+    .img-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 680px) { .img-grid { grid-template-columns: 1fr; } }
+
+    .img-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; overflow: hidden;
+    }
+    .img-card-label {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-muted); padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .img-card img {
+      width: 100%; display: block;
+      max-height: 400px; object-fit: contain;
+      background: #0d0d0d;
+    }
+
+    /* ── Summary Bar ───────────────────────────────────────────────── */
+    .summary-bar {
+      display: flex; gap: 1px;
+      background: var(--border); border-radius: 4px; overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .summary-item {
+      flex: 1; background: var(--surface);
+      padding: 14px 20px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .summary-item .s-val {
+      font-family: var(--font-display); font-size: 2rem;
+      letter-spacing: 2px;
+    }
+    .summary-item .s-lbl {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase;
+    }
+    .s-val.fire  { color: var(--red);   text-shadow: 0 0 20px rgba(255,59,26,0.5); }
+    .s-val.smoke { color: var(--smoke); text-shadow: 0 0 20px rgba(141,168,196,0.3); }
+    .s-val.total { color: var(--amber); }
+
+    /* ── Detection Table ───────────────────────────────────────────── */
+    .det-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--font-mono); font-size: 0.72rem;
+    }
+    .det-table thead th {
+      text-align: left; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted); font-weight: 400;
+      letter-spacing: 0.15em; text-transform: uppercase; font-size: 0.6rem;
+    }
+    .det-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .det-table tbody tr:last-child { border-bottom: none; }
+    .det-table tbody tr:hover { background: rgba(255,180,0,0.03); }
+    .det-table td { padding: 11px 14px; color: var(--text); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase;
+      font-weight: 600;
+    }
+    .badge.fire  { background: rgba(255,59,26,0.15); color: var(--red); border: 1px solid rgba(255,59,26,0.3); }
+    .badge.smoke { background: rgba(141,168,196,0.1); color: var(--smoke); border: 1px solid rgba(141,168,196,0.2); }
+
+    .conf-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .conf-bar {
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .conf-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+    .conf-fill.fire  { background: linear-gradient(90deg, var(--amber), var(--red)); }
+    .conf-fill.smoke { background: linear-gradient(90deg, var(--smoke), #5c7a96); }
+    .conf-pct { color: var(--amber); font-size: 0.7rem; min-width: 42px; text-align: right; }
+
+    .empty-state {
+      padding: 40px 20px; text-align: center;
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: var(--text-muted); letter-spacing: 0.1em;
+    }
+    .empty-state span { font-size: 1.5rem; display: block; margin-bottom: 10px; }
+
+    /* ── Error Banner ──────────────────────────────────────────────── */
+    .error-banner {
+      display: none; margin-top: 16px;
+      background: rgba(255,59,26,0.08); border: 1px solid rgba(255,59,26,0.3);
+      border-left: 3px solid var(--red); border-radius: 3px;
+      padding: 12px 16px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--red);
+    }
+    .error-banner.visible { display: block; }
+
+    /* ── Footer ────────────────────────────────────────────────────── */
+    footer {
+      margin-top: 60px; padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--text-dim); letter-spacing: 0.15em;
+      display: flex; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-block">
+      <div class="logo-title">PROOFAI</div>
+      <div class="logo-sub">Fire &amp; Smoke Detection · YOLO11n</div>
+    </div>
+    <div class="header-status">
+      <span class="dot"></span>
+      <span id="model-status">MODEL READY</span>
+    </div>
+  </header>
+
+  <!-- Upload Zone -->
+  <div class="upload-zone" id="drop-zone">
+    <input type="file" id="file-input" accept="image/*">
+    <span class="upload-icon">🔥</span>
+    <div class="upload-label">Drop image or click to upload</div>
+    <div class="upload-hint">JPG · PNG · WEBP · BMP &nbsp;|&nbsp; Max recommended: 4K</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <span class="ctrl-label">Confidence</span>
+    <input type="range" id="conf-slider" min="5" max="95" value="25" step="5">
+    <span class="ctrl-value" id="conf-display">25%</span>
+    <button class="btn-analyze" id="btn-run" disabled>Analyze</button>
+  </div>
+
+  <div class="loading-bar" id="loading-bar"></div>
+  <div class="error-banner" id="error-banner"></div>
+
+  <!-- Results -->
+  <div class="results-wrap" id="results-wrap">
+
+    <div class="section-heading">INFERENCE RESULT</div>
+
+    <!-- Image Comparison -->
+    <div class="img-grid">
+      <div class="img-card">
+        <div class="img-card-label">Original</div>
+        <img id="img-original" src="" alt="Original">
+      </div>
+      <div class="img-card">
+        <div class="img-card-label">Detections</div>
+        <img id="img-annotated" src="" alt="Annotated">
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-bar">
+      <div class="summary-item">
+        <div class="s-val total" id="s-total">0</div>
+        <div class="s-lbl">Total Detections</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-val fire" id="s-fire">0</div>
+        <div class="s-lbl">Fire</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-val smoke" id="s-smoke">0</div>
+        <div class="s-lbl">Smoke</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-val" id="s-conf" style="color:var(--amber)">—</div>
+        <div class="s-lbl">Avg Confidence</div>
+      </div>
+    </div>
+
+    <!-- Detection Table -->
+    <div class="section-heading">DETECTIONS</div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:4px; overflow:hidden;">
+      <table class="det-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Class</th>
+            <th>Confidence</th>
+            <th>Bounding Box</th>
+          </tr>
+        </thead>
+        <tbody id="det-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /results-wrap -->
+
+  <footer>
+    <span>PROOFAI · YOLO11n · fire &amp; smoke</span>
+    <span id="footer-time"></span>
+  </footer>
+</div>
+
+<script>
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('file-input');
+const confSlider = document.getElementById('conf-slider');
+const confDisplay= document.getElementById('conf-display');
+const btnRun     = document.getElementById('btn-run');
+const loadingBar = document.getElementById('loading-bar');
+const errorBanner= document.getElementById('error-banner');
+const resultsWrap= document.getElementById('results-wrap');
+
+let selectedFile = null;
+
+/* ── Conf slider ─────────────────────────────────────── */
+confSlider.addEventListener('input', () => {
+  confDisplay.textContent = confSlider.value + '%';
+});
+
+/* ── File selection ──────────────────────────────────── */
+function setFile(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  selectedFile = f;
+  dropZone.querySelector('.upload-label').textContent = f.name;
+  dropZone.querySelector('.upload-hint').textContent  =
+    (f.size / 1024 / 1024).toFixed(2) + ' MB';
+  dropZone.style.borderColor = 'var(--amber)';
+  btnRun.disabled = false;
+  hideError();
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  setFile(e.dataTransfer.files[0]);
+});
+
+/* ── Paste ───────────────────────────────────────────── */
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) { setFile(item.getAsFile()); break; }
+  }
+});
+
+/* ── Error helpers ───────────────────────────────────── */
+function showError(msg) {
+  errorBanner.textContent = '⚠ ' + msg;
+  errorBanner.classList.add('visible');
+}
+function hideError() { errorBanner.classList.remove('visible'); }
+
+/* ── Run inference ───────────────────────────────────── */
+btnRun.addEventListener('click', runInference);
+
+async function runInference() {
+  if (!selectedFile) return;
+  hideError();
+  btnRun.disabled = true;
+  loadingBar.classList.add('active');
+  resultsWrap.classList.remove('visible');
+
+  const formData = new FormData();
+  formData.append('image', selectedFile);
+  formData.append('conf', (parseInt(confSlider.value) / 100).toFixed(2));
+
+  try {
+    const res  = await fetch('/predict', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok || data.error) { showError(data.error || 'Server error.'); return; }
+
+    renderResults(data);
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  } finally {
+    btnRun.disabled = false;
+    loadingBar.classList.remove('active');
+  }
+}
+
+/* ── Render ─────────────────────────────────────────── */
+function renderResults(data) {
+  // Images
+  document.getElementById('img-original').src  = 'data:image/png;base64,' + data.original;
+  document.getElementById('img-annotated').src = 'data:image/png;base64,' + data.annotated;
+
+  const dets = data.detections;
+  const fireCount  = dets.filter(d => d.label === 'fire').length;
+  const smokeCount = dets.filter(d => d.label === 'smoke').length;
+  const avgConf    = dets.length ? (dets.reduce((s,d) => s + d.confidence, 0) / dets.length).toFixed(1) + '%' : '—';
+
+  document.getElementById('s-total').textContent = data.total;
+  document.getElementById('s-fire').textContent  = fireCount;
+  document.getElementById('s-smoke').textContent = smokeCount;
+  document.getElementById('s-conf').textContent  = avgConf;
+
+  // Table
+  const tbody = document.getElementById('det-tbody');
+  tbody.innerHTML = '';
+
+  if (!dets.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><span>✓</span>No detections above threshold.</div></td></tr>`;
+  } else {
+    dets.forEach((d, i) => {
+      const b = d.bbox;
+      const bboxStr = `(${b.x1},${b.y1}) → (${b.x2},${b.y2})`;
+      tbody.innerHTML += `
+        <tr>
+          <td style="color:var(--text-muted)">${i + 1}</td>
+          <td><span class="badge ${d.label}">${d.label}</span></td>
+          <td>
+            <div class="conf-bar-wrap">
+              <div class="conf-bar"><div class="conf-fill ${d.label}" style="width:${d.confidence}%"></div></div>
+              <span class="conf-pct">${d.confidence}%</span>
+            </div>
+          </td>
+          <td style="color:var(--text-muted); font-size:0.65rem;">${bboxStr}</td>
+        </tr>`;
+    });
+  }
+
+  resultsWrap.classList.add('visible');
+  resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('footer-time').textContent = new Date().toLocaleTimeString();
+}
+</script>
+</body>
+</html>
